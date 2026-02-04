@@ -22,6 +22,20 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (username, password) => {
         const res = await api.post('/auth/login', { username, password });
+        // If OTP sent, return immediately without setting user
+        if (res.data.message === 'OTP_SENT') {
+            return res.data;
+        }
+        // Fallback for legacy (should not happen with new flow)
+        localStorage.setItem('token', res.data.token);
+        localStorage.setItem('role', res.data.role);
+        localStorage.setItem('userId', res.data.userId);
+        setUser({ token: res.data.token, role: res.data.role, userId: res.data.userId });
+        return res.data;
+    };
+
+    const verifyOtp = async (username, otp) => {
+        const res = await api.post('/auth/verify-otp', { username, otp });
         localStorage.setItem('token', res.data.token);
         localStorage.setItem('role', res.data.role);
         localStorage.setItem('userId', res.data.userId);
@@ -42,7 +56,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, verifyOtp, register, logout, loading }}>
             {children}
         </AuthContext.Provider>
     );

@@ -9,7 +9,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['contractor', 'officer', 'auditor'],
     required: true
-  }
+  },
+  otp: { type: String },
+  otpExpires: { type: Date }
 });
 
 userSchema.pre('save', async function (next) {

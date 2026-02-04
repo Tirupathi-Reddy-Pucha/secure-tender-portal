@@ -23,7 +23,7 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Login
+// Login (Step 1: Check Password & Generate OTP)
 router.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -36,6 +36,38 @@ router.post('/login', async (req, res) => {
             console.log("Invalid password: ", username);
             return res.status(401).json({ message: 'Invalid credentials' });
         }
+
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        user.otp = otp;
+        user.otpExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
+        await user.save();
+
+        console.log(`=================================================`);
+        console.log(`[SECURE LOGIN GATEWAY] OTP for ${username}: ${otp}`);
+        console.log(`=================================================`);
+
+        res.json({ message: 'OTP_SENT', username });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Verify OTP (Step 2: Generate Token)
+router.post('/verify-otp', async (req, res) => {
+    try {
+        const { username, otp } = req.body;
+        const user = await User.findOne({ username });
+
+        if (!user || user.otp !== otp || user.otpExpires < Date.now()) {
+            return res.status(400).json({ message: 'Invalid or Expired OTP' });
+        }
+
+        // Clear OTP
+        user.otp = undefined;
+        user.otpExpires = undefined;
+        await user.save();
 
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET || 'secretKey', { expiresIn: '7d' });
 
