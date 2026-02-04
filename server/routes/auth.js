@@ -6,7 +6,15 @@ const AuditLog = require('../models/AuditLog');
 // Register
 router.post('/register', async (req, res) => {
     try {
-        const { username, email, password, role } = req.body;
+        const { username, email, password, role, officerCode } = req.body;
+
+        if (role === 'officer') {
+            const OFFICER_REGISTRATION_CODE = "SECURE_OFFICER_2026";
+            if (officerCode !== OFFICER_REGISTRATION_CODE) {
+                return res.status(403).json({ error: "Invalid Officer Registration Code" });
+            }
+        }
+
         const user = new User({ username, email, password, role });
         await user.save();
         res.status(201).json({ message: 'User registered' });

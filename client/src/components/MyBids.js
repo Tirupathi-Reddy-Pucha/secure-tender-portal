@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import Layout from './Layout';
 
 const MyBids = () => {
+    const navigate = useNavigate();
     const [bids, setBids] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -22,6 +24,20 @@ const MyBids = () => {
 
     return (
         <Layout>
+            <button
+                onClick={() => navigate('/contractor')}
+                className="glass-btn"
+                style={{
+                    marginBottom: '1rem',
+                    padding: '0.5rem 1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    width: 'fit-content'
+                }}
+            >
+                ← Back to Dashboard
+            </button>
             <h2 style={{ marginBottom: '2rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>MY SUBMITTED BIDS</h2>
 
             {loading ? (

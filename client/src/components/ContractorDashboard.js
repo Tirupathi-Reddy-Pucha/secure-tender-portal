@@ -128,7 +128,16 @@ const ContractorDashboard = () => {
                     </thead>
                     <tbody>
                         {tenders.filter(t => t.status === 'closed').map(t => {
-                            const isWinner = t.winner && t.winner.contractor && (t.winner.contractor._id === user?.userId || t.winner.contractor === user?.userId);
+                            const winnerContractor = t.winner?.contractor;
+                            const winnerId = winnerContractor?._id || winnerContractor; // Handle populated or raw ID
+                            const isWinner = Boolean(winnerId && user?.userId && String(winnerId) === String(user.userId));
+
+                            console.log('Tender:', t.title);
+                            console.log('WinnerObj:', t.winner);
+                            console.log('WinnerContractor:', winnerContractor);
+                            console.log('WinnerID:', winnerId);
+                            console.log('UserID:', user?.userId);
+                            console.log('IsWinner:', isWinner);
 
                             return (
                                 <tr key={t._id}>
@@ -147,7 +156,7 @@ const ContractorDashboard = () => {
                                     <td>
                                         {t.winner ? (
                                             <span style={{ color: '#10b981', fontWeight: 'bold' }}>
-                                                🏆 {t.winner.contractor?.username || "You"}
+                                                🏆 {isWinner ? "You" : (winnerContractor?.username || "Winner Selected")}
                                             </span>
                                         ) : (
                                             <span style={{ color: '#64748b', fontStyle: 'italic' }}>Pending Decision</span>

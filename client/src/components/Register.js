@@ -5,13 +5,13 @@ import AuthContext from '../context/AuthContext';
 const Register = () => {
     const { register } = useContext(AuthContext);
     const navigate = useNavigate();
-    const [formData, setFormData] = useState({ username: '', email: '', password: '', role: 'contractor' });
+    const [formData, setFormData] = useState({ username: '', email: '', password: '', role: 'contractor', officerCode: '' });
     const [error, setError] = useState(null);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await register(formData.username, formData.email, formData.password, formData.role);
+            await register(formData.username, formData.email, formData.password, formData.role, formData.officerCode);
             navigate('/');
         } catch (err) {
             setError(err.response?.data?.error || 'Registration failed');
@@ -66,6 +66,18 @@ const Register = () => {
                             <option value="officer" style={{ color: 'black' }}>Officer</option>
                         </select>
                     </div>
+                    {formData.role === 'officer' && (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', color: '#f59e0b' }}>OFFICER SECRET CODE</label>
+                            <input
+                                type="password"
+                                className="glass-input"
+                                placeholder="Enter Officer Code"
+                                value={formData.officerCode}
+                                onChange={(e) => setFormData({ ...formData, officerCode: e.target.value })}
+                            />
+                        </div>
+                    )}
                     <button type="submit" className="glass-btn" style={{ marginTop: '1rem' }}>REGISTER</button>
                     <div style={{ textAlign: 'center', marginTop: '1rem' }}>
                         <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Already have an account? </span>

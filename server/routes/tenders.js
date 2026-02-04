@@ -49,13 +49,24 @@ const processWinner = async (tender) => {
 
         // Sort: Lowest Amount -> Earliest Turn-in (Tie-breaker)
         decryptedBids.sort((a, b) => {
-            if (a.amount === b.amount) {
-                return new Date(a.createdAt) - new Date(b.createdAt);
+            if (a.amount !== b.amount) {
+                return a.amount - b.amount; // Lowest Amount First
             }
-            return a.amount - b.amount;
+            // Tie-breaker: Earliest Creation Time
+            const timeA = new Date(a.createdAt).getTime();
+            const timeB = new Date(b.createdAt).getTime();
+            if (timeA !== timeB) {
+                return timeA - timeB; // Earliest Date First
+            }
+            // Ultimate Tie-breaker: ObjectId (Creation Order)
+            return String(a._id).localeCompare(String(b._id));
         });
 
         const winner = decryptedBids[0];
+
+        console.log(`[Auto-Award] Tender: ${tender.title}`);
+        console.log(`[Auto-Award] Sorted Bids:`, decryptedBids.map(b => ({ id: b._id, amount: b.amount, time: b.createdAt })));
+        console.log(`[Auto-Award] Selected Winner: ${winner._id} ($${winner.amount})`);
 
         tender.winner = winner._id;
         tender.status = 'closed';
