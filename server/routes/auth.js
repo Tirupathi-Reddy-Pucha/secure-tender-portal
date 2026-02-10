@@ -3,6 +3,17 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const AuditLog = require('../models/AuditLog');
 
+const dhKey = require('../utils/dhKey');
+
+// Get Server DH Public Key (for Key Exchange)
+router.get('/dh-key', (req, res) => {
+    res.json({
+        publicKey: dhKey.getPublicKey(),
+        prime: dhKey.getPrime(),
+        generator: dhKey.getGenerator()
+    });
+});
+
 // Register
 router.post('/register', async (req, res) => {
     try {

@@ -8,28 +8,39 @@ const CryptoJS = require('crypto-js');
 // Secret Key for AES (In prod, this should be very secure)
 const BID_SECRET = process.env.BID_SECRET || 'superSecretBidKey123';
 
-// Create Bid (Contractor)
+// Create Bid (Contractor) - Hybrid Encryption Flow
 router.post('/', auth, checkRole(['contractor']), async (req, res) => {
     try {
-        const { projectId, amount, supportingDocument } = req.body;
+        const { projectId, amount, supportingDocument, clientPublicKey } = req.body;
 
         // Validate Tender
         const Tender = require('../models/Tender');
         const tender = await Tender.findById(projectId);
-        if (!tender) {
-            return res.status(404).json({ message: 'Tender not found' });
-        }
-        if (tender.status !== 'open') {
-            return res.status(400).json({ message: 'Bidding is closed for this tender' });
-        }
-        if (new Date() > new Date(tender.deadline)) {
-            return res.status(400).json({ message: 'Deadline has passed' });
+        if (!tender) return res.status(404).json({ message: 'Tender not found' });
+        if (tender.status !== 'open') return res.status(400).json({ message: 'Bidding is closed' });
+        if (new Date() > new Date(tender.deadline)) return res.status(400).json({ message: 'Deadline has passed' });
+
+        // 1. KEY EXCHANGE & DECRYPTION
+        // Compute Shared Secret using Client's Public Key
+        const dhKey = require('../utils/dhKey');
+        const sharedSecretBuffer = dhKey.computeSecret(clientPublicKey);
+        // Derive AES Key from Shared Secret (SHA256 hash of secret)
+        const sharedSecretHash = crypto.createHash('sha256').update(sharedSecretBuffer).digest('hex');
+
+        // Decrypt the bid amount using the Session Key (Shared Secret)
+        // Note: Client encrypts using the SHA256 of the shared secret
+        const bytes = CryptoJS.AES.decrypt(amount, sharedSecretHash);
+        const originalAmount = bytes.toString(CryptoJS.enc.Utf8);
+
+        if (!originalAmount || isNaN(parseFloat(originalAmount))) {
+            return res.status(400).json({ message: 'Encryption Handshake Failed' });
         }
 
-        // 1. Encrypt Amount
-        const encryptedAmount = CryptoJS.AES.encrypt(amount, BID_SECRET).toString();
+        // 2. RE-ENCRYPTION FOR STORAGE
+        // Encrypt with Master BID_SECRET for consistent storage
+        const storageEncryptedAmount = CryptoJS.AES.encrypt(originalAmount, BID_SECRET).toString();
 
-        // 2. Hash Document (Base64 String)
+        // 3. Hash Document
         const hashSum = crypto.createHash('sha256');
         hashSum.update(supportingDocument);
         const documentHash = hashSum.digest('hex');
@@ -37,22 +48,22 @@ router.post('/', auth, checkRole(['contractor']), async (req, res) => {
         const bid = new Bid({
             contractor: req.user.id,
             projectId,
-            encryptedAmount,
+            encryptedAmount: storageEncryptedAmount, // Stored securely with Master Key
             documentHash,
             supportingDocument
         });
 
         await bid.save();
 
-        // Log
         await new AuditLog({
             action: 'SUBMIT_BID',
             performedBy: req.user.id,
-            details: { bidId: bid._id, projectId }
+            details: { bidId: bid._id, projectId, encryption: 'Hybrid (DH+AES)' }
         }).save();
 
-        res.status(201).json({ message: 'Bid submitted securely' });
+        res.status(201).json({ message: 'Bid submitted securely via Hybrid Encryption' });
     } catch (err) {
+        console.error("Bid Submission Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
